@@ -1934,6 +1934,7 @@ function VoicePage({ go }: { go: (v: View) => void }) {
   const [audioData, setAudioData] = useState<number[]>(Array(32).fill(10));
   const [micError, setMicError] = useState("");
   const [promptText, setPromptText] = useState("");
+  const [processing, setProcessing] = useState(false);
 
   const shufflePrompt = () => setPromptText(READING_PROMPTS[Math.floor(Math.random() * READING_PROMPTS.length)]);
 
@@ -2006,6 +2007,7 @@ function VoicePage({ go }: { go: (v: View) => void }) {
       });
 
       mediaRecorder.addEventListener("stop", async () => {
+        setProcessing(true);
         const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
         try {
           const formData = new FormData();
@@ -2030,9 +2032,11 @@ function VoicePage({ go }: { go: (v: View) => void }) {
             });
           }
           setResult(data.breakdown);
+          setProcessing(false);
         } catch (backendErr: any) {
           console.error("Backend Voice AI Error:", backendErr);
           setMicError(`AI Error: ${backendErr?.message || 'Failed to connect'}`);
+          setProcessing(false);
         }
       });
 
@@ -2066,8 +2070,27 @@ function VoicePage({ go }: { go: (v: View) => void }) {
             <Mic className="h-12 w-12" />
           </button>
 
-          {micError && <p className="text-red-400 mt-4 text-sm">{micError}</p>}
-          <div className="mt-5 text-white/70 font-medium">{rec ? "Listening... (12s)" : result ? "Analysis Complete!" : "Tap mic to start"}</div>
+          {micError && <p className="text-red-400 mt-4 text-sm bg-red-400/10 px-3 py-1.5 rounded-lg border border-red-400/20">{micError}</p>}
+          <div className="mt-5 text-white/70 font-medium">
+            {rec ? (
+              <span className="flex items-center gap-2 text-cyan-400 animate-pulse">
+                <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                Listening... (12s)
+              </span>
+            ) : processing ? (
+              <span className="flex items-center gap-2 text-violet-400 animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Analyzing your tone...
+              </span>
+            ) : result ? (
+              <span className="text-green-400 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Analysis Complete!
+              </span>
+            ) : (
+              "Tap mic to start"
+            )}
+          </div>
         </div>
 
         <div className="flex-1 bg-[#06060e] p-6 rounded-2xl border border-white/10 shadow-inner">
