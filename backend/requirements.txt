@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
 python-multipart
+tensorflow
+tf-keras
 deepface
 librosa
 imageio-ffmpeg
