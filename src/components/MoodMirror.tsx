@@ -767,12 +767,12 @@ function Login({ go, setName }: { go: (v: View) => void; setName: (n: string) =>
           className="space-y-3 animate-[fadeUp_0.28s_ease-out]"
         >
           {tab === "up" && (
-            <Input icon={<UserIcon className="h-4 w-4" />} placeholder="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
+            <Input icon={<UserIcon className="h-4 w-4" />} placeholder="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} onKeyDown={(e) => e.key === 'Enter' && submit()} />
           )}
-          <Input icon={<Mail className="h-4 w-4" />} placeholder="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-          <Input icon={<Lock className="h-4 w-4" />} type="password" placeholder="Password" value={form.pw} onChange={(v) => setForm({ ...form, pw: v })} />
+          <Input icon={<Mail className="h-4 w-4" />} placeholder="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+          <Input icon={<Lock className="h-4 w-4" />} type="password" placeholder="Password" value={form.pw} onChange={(v) => setForm({ ...form, pw: v })} onKeyDown={(e) => e.key === 'Enter' && submit()} />
           {tab === "up" && (
-            <Input icon={<Lock className="h-4 w-4" />} type="password" placeholder="Confirm Password" value={form.confirm} onChange={(v) => setForm({ ...form, confirm: v })} />
+            <Input icon={<Lock className="h-4 w-4" />} type="password" placeholder="Confirm Password" value={form.confirm} onChange={(v) => setForm({ ...form, confirm: v })} onKeyDown={(e) => e.key === 'Enter' && submit()} />
           )}
           {tab === "in" && (
             <div className="text-right">
@@ -841,7 +841,7 @@ function Login({ go, setName }: { go: (v: View) => void; setName: (n: string) =>
   );
 }
 
-function Input({ icon, ...p }: { icon: React.ReactNode; placeholder: string; value: string; onChange: (v: string) => void; type?: string }) {
+function Input({ icon, onKeyDown, ...p }: { icon: React.ReactNode; placeholder: string; value: string; onChange: (v: string) => void; type?: string; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void }) {
   const [showPw, setShowPw] = useState(false);
   const isPassword = p.type === "password";
   return (
@@ -852,6 +852,7 @@ function Input({ icon, ...p }: { icon: React.ReactNode; placeholder: string; val
         placeholder={p.placeholder}
         value={p.value}
         onChange={(e) => p.onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
       />
       {isPassword && (
@@ -1752,7 +1753,7 @@ function FacePage({ go }: { go: (v: View) => void }) {
             const formData = new FormData();
             formData.append("file", blob, "face.jpg");
 
-            const AI_BASE_URL = import.meta.env.VITE_AI_API_URL || "http://127.0.0.1:8000";
+            const AI_BASE_URL = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://moodmirror-ai.onrender.com";
             const response = await fetch(`${AI_BASE_URL}/analyze/face`, {
               method: "POST",
               body: formData
@@ -2014,7 +2015,7 @@ function VoicePage({ go }: { go: (v: View) => void }) {
           const formData = new FormData();
           formData.append("file", audioBlob, "voice.webm");
 
-          const AI_BASE_URL = import.meta.env.VITE_AI_API_URL || "http://127.0.0.1:8000";
+          const AI_BASE_URL = import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://moodmirror-ai.onrender.com";
           const response = await fetch(`${AI_BASE_URL}/analyze/voice`, {
             method: "POST",
             body: formData
@@ -5299,12 +5300,25 @@ function MoodMirrorInner() {
   };
 
   const handleSignOut = async () => {
+    if (user) {
+      try {
+        const { deleteChatHistory } = await import("@/lib/db");
+        await deleteChatHistory(user.id);
+      } catch (e) {
+        console.error("Failed to delete chat history on signout", e);
+      }
+    }
     await signOut();
     setName("Alex");
     setAvatar(null);
     setAddresses([]);
     setNotifs(NOTIFICATIONS);
-    try { localStorage.removeItem("mm_view"); localStorage.removeItem("mm_name"); localStorage.removeItem("mm_dark"); } catch { }
+    try { 
+      localStorage.removeItem("mm_view"); 
+      localStorage.removeItem("mm_name"); 
+      localStorage.removeItem("mm_dark"); 
+      localStorage.removeItem("mm_chat");
+    } catch { }
     go("start");
   };
 

@@ -135,11 +135,12 @@ export async function lumiChat(
 ): Promise<string> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string;
   if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY") {
+    console.warn("[Lumi] Gemini API Key missing, falling back to local.");
     return localLumiReply(message);
   }
 
   const systemPrompt = buildSystemPrompt(context);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const res = await fetch(url, {
@@ -161,26 +162,27 @@ export async function lumiChat(
       json?.candidates?.[0]?.content?.parts?.[0]?.text ?? localLumiReply(message);
     return text.trim();
   } catch (err) {
-    console.error("[lumiChat] Gemini error:", err);
+    console.error("[Lumi] Fetch Error:", err);
     return localLumiReply(message);
   }
 }
+
 
 function buildSystemPrompt(context: { recentMoods: MoodLog[]; recentJournals: Journal[] }) {
   const moodSummary =
     context.recentMoods.length > 0
       ? context.recentMoods
-          .slice(0, 3)
-          .map((m) => `- ${m.primary_emotion} (score ${m.overall_score}/100) via ${m.source}`)
-          .join("\n")
+        .slice(0, 3)
+        .map((m) => `- ${m.primary_emotion} (score ${m.overall_score}/100) via ${m.source}`)
+        .join("\n")
       : "No recent mood data.";
 
   const journalSummary =
     context.recentJournals.length > 0
       ? context.recentJournals
-          .slice(0, 2)
-          .map((j) => `- "${j.entry_text.slice(0, 120)}..."`)
-          .join("\n")
+        .slice(0, 2)
+        .map((j) => `- "${j.entry_text.slice(0, 120)}..."`)
+        .join("\n")
       : "No recent journal entries.";
 
   return `You are Lumi, the warm, empathetic, and non-judgmental AI wellness companion inside MoodMirror.
@@ -340,7 +342,7 @@ const DEFAULT_EXERCISE_STATS: ExerciseStats = {
 export async function getExerciseState(userId: string): Promise<ExerciseStats> {
   const { data, error } = await supabase.from("profiles").select("theme_preference").eq("id", userId).single();
   if (error || !data?.theme_preference) return DEFAULT_EXERCISE_STATS;
-  
+
   try {
     // Check if it's the old format
     if (data.theme_preference.startsWith("active_video:")) {
