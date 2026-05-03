@@ -1751,7 +1751,8 @@ function FacePage({ go }: { go: (v: View) => void }) {
             const formData = new FormData();
             formData.append("file", blob, "face.jpg");
 
-            const response = await fetch("http://127.0.0.1:8000/analyze/face", {
+            const AI_BASE_URL = import.meta.env.VITE_AI_API_URL || "http://127.0.0.1:8000";
+            const response = await fetch(`${AI_BASE_URL}/analyze/face`, {
               method: "POST",
               body: formData
             });
@@ -2010,7 +2011,8 @@ function VoicePage({ go }: { go: (v: View) => void }) {
           const formData = new FormData();
           formData.append("file", audioBlob, "voice.webm");
 
-          const response = await fetch("http://127.0.0.1:8000/analyze/voice", {
+          const AI_BASE_URL = import.meta.env.VITE_AI_API_URL || "http://127.0.0.1:8000";
+          const response = await fetch(`${AI_BASE_URL}/analyze/voice`, {
             method: "POST",
             body: formData
           });
