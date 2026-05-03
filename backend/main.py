@@ -7,6 +7,8 @@ import librosa
 import numpy as np
 import imageio_ffmpeg
 import subprocess
+import gc
+import tensorflow as tf
 
 app = FastAPI(title="MoodMirror AI Engine")
 
@@ -65,6 +67,10 @@ async def analyze_face(file: UploadFile = File(...)):
         # Convert numpy floats to native Python floats so FastAPI can return JSON
         python_confidence = float(confidence)
         python_raw_scores = {k: float(v) for k, v in emotion_scores.items()}
+        
+        # Clean up TensorFlow memory and force garbage collection
+        tf.keras.backend.clear_session()
+        gc.collect()
         
         return {
             "emotion": mapped_emotion,
@@ -131,6 +137,9 @@ async def analyze_voice(file: UploadFile = File(...)):
         # Cleanup
         if os.path.exists(temp_webm): os.remove(temp_webm)
         if os.path.exists(temp_wav): os.remove(temp_wav)
+        
+        # Force garbage collection
+        gc.collect()
         
         return {
             "overall_score": overall_score,
