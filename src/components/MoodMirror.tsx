@@ -187,10 +187,21 @@ function ChatWidget() {
   const [msgs, setMsgs] = useState<{ role: "ai" | "user"; text: string }[]>(INITIAL_MSG);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Start fresh on mount — no loading from DB or localStorage
+  // Load chat history from Supabase on mount (falls back to localStorage)
   useEffect(() => {
-    setMsgs(INITIAL_MSG);
-  }, []);
+    if (!user) {
+      try {
+        const raw = localStorage.getItem("mm_chat");
+        if (raw) setMsgs(JSON.parse(raw));
+      } catch { }
+      return;
+    }
+    getChatHistory(user.id).then((history) => {
+      if (history.length > 0) {
+        setMsgs(history.map((m) => ({ role: m.role as "ai" | "user", text: m.message })));
+      }
+    });
+  }, [user?.id]);
 
   // Close 3-dot menu on outside click
   useEffect(() => {
@@ -276,6 +287,9 @@ function ChatWidget() {
   }, []);
 
   useEffect(() => {
+    try {
+      localStorage.setItem("mm_chat", JSON.stringify(msgs));
+    } catch { }
     scrollRef.current?.scrollTo({ top: 99999, behavior: "smooth" });
   }, [msgs, typing]);
 
@@ -286,7 +300,8 @@ function ChatWidget() {
       setMsgs((m) => [...m, { role: "user", text: t }]);
       setInput("");
       setTyping(true);
-      // No longer persisting to DB
+      // Persist user message to DB
+      if (user) await saveChatMessage(user.id, "user", t);
       try {
         // Fetch context (mood logs + journals) for Gemini system prompt
         const [recentMoods, recentJournals] = user
@@ -294,6 +309,7 @@ function ChatWidget() {
           : [[] as MoodLog[], [] as Journal[]];
         const reply = await lumiChat(t, { recentMoods, recentJournals });
         setMsgs((m) => [...m, { role: "ai", text: reply }]);
+        if (user) await saveChatMessage(user.id, "ai", reply);
       } catch {
         setMsgs((m) => [...m, { role: "ai", text: "Sorry, I had a moment of silence. Try again! 🌙" }]);
       } finally {
